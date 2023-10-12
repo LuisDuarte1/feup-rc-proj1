@@ -105,7 +105,7 @@ void read_packet(int fd, packet_t * packet){
 
             case PACKET_END:
                 if(recv_buf == FLAG){
-                    new_status = SUCCESS;
+                    new_status = SUCCESS;  
                 }
                 break;
         }
@@ -116,8 +116,13 @@ void read_packet(int fd, packet_t * packet){
     }
     if(packet->status == SUCCESS){
         if(packet->control == CONTROL_I0 || packet->control == CONTROL_I1){
-            packet->bcc2 = packet->data[packet->data_size-1];
-            packet->data_size--;
+            if(packet->data[packet->data_size - 2] == 0x7d){
+                packet->bcc2 = FLAG;
+                packet->data_size -= 2;
+            } else {
+                packet->bcc2 = packet->data[packet->data_size-1];
+                packet->data_size--;
+            }
         }
         alarm(0);
         alarmEnabled = false;
@@ -142,11 +147,25 @@ int write_data(int fd, unsigned char *buf, int size)
     packet_start[1] = ADDR_SEND;
     packet_start[2] = information_toggle ? CONTROL_I1 : CONTROL_I0;
     packet_start[3] = packet_start[1] ^ packet_start[2];
+    
+    unsigned char bcc2 = 0;
+    for(int i = 0; i < size; i++) bcc2 ^= buf[i];
+    
     if(write(fd, packet_start, 4) == -1) return -1;
+    
+    //TODO: stuffing buffer
+    stuff_packet(buf, &size);
     if(write(fd, buf, size) == -1) return -1;
-    unsigned char packet_end[2] = {buf[0], FLAG};
-    for(int i = 1; i < size; i++) packet_end[0] ^= buf[i];
-    if(write(fd, packet_end, 2) == -1) return -1;
+    free(buf);
+    buf = NULL;
+    
+    //TODO: stuffing bcc2
+    if(bcc2 == FLAG){
+        const unsigned char bcc_flag[2] = {ESCAPE_CHAR, ESCAPE_FLAG};
+        if(write(fd, bcc_flag, 2) == -1) return -1;        
+    } else {
+        if(write(fd, &bcc2, 1) == -1) return -1;
+    } 
     return 0;
 }
 
@@ -157,24 +176,61 @@ void alarmHandler(int signal){
        
 }
 
+void stuff_packet(unsigned char * buf, int * size){
+
+    unsigned char * nbuffer = (unsigned char*) malloc(*size);
+    if(nbuffer == NULL){
+        perror("rip mallocanss");
+        exit(1);
+    }
+    int old_size = *size;
+    int new_size = *size;
+    int nbuffer_pos = 0;
+    for(int i = 0; i < old_size; i++, nbuffer_pos++){
+     if(buf[i] == FLAG || buf[i] == ESCAPE_CHAR){
+        new_size++;
+        nbuffer = realloc(nbuffer, new_size);
+        
+        nbuffer[nbuffer_pos] = ESCAPE_CHAR;
+        nbuffer_pos++;
+        nbuffer[nbuffer_pos] = buf[i] == FLAG ? ESCAPE_FLAG : ESCAPE_ESCAPE;
+     } else {
+        nbuffer[nbuffer_pos] = buf[i];
+     }
+    }
+    
+    buf = nbuffer;
+    *size = new_size; 
+}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+void destuff_packet(packet_t * packet){
+    if(!(packet->control == CONTROL_I0 || packet->control == CONTROL_I1)) 
+        return;
+    unsigned char * nbuffer = (unsigned char*) malloc(packet->data_size);
+ 
+    if(nbuffer == NULL){
+        perror("rip mallocanss");
+        exit(1);
+    }
+    
+    int new_size = packet->data_size;
+    int nbuffer_pos = 0;
+    
+    for(int i = 0; i < packet->data_size; i++, nbuffer_pos++){
+        if(packet->data[i] == ESCAPE_CHAR){
+            nbuffer[nbuffer_pos] = 
+                packet->data[i+1] == ESCAPE_FLAG ? FLAG : ESCAPE_CHAR;
+            
+            i++;
+            new_size--;
+        } else {
+            nbuffer[nbuffer_pos] = packet->data[i];
+        }
+    }
+    
+    free(packet->data);
+    packet->data = nbuffer;
+    packet->data_size = new_size;    
+}
 
