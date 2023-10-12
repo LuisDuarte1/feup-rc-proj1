@@ -24,6 +24,9 @@
 #define CONTROL_UA 0x07
 #define CONTROL_I0 0x00
 #define CONTROL_I1 0x40 
+#define ESCAPE_CHAR 0x7d
+#define ESCAPE_FLAG 0x5e
+#define ESCAPE_ESCAPE 0x5d
 
 extern bool alarmEnabled;
 extern int alarmCount;
@@ -62,5 +65,6 @@ void read_packet(int fd, packet_t * packet);
 bool validate_packet(packet_t * packet);
 void alarmHandler(int signal);
 
-
+void stuff_packet(unsigned char * buf, int * size);
+void destuff_packet(packet_t * packet);
 #endif
