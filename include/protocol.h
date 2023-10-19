@@ -55,9 +55,7 @@ typedef struct packet_t {
 
 
 void init_packet(packet_t * packet);
-
-int write_st(int fd);
-int write_ua(int fd);
+int write_command(int fd, bool tx, char command);
 int write_data(int fd, unsigned char * buf, int size);
 
 void read_packet(int fd, packet_t * packet);

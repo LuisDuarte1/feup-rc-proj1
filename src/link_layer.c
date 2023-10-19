@@ -59,7 +59,7 @@ int openWrite(LinkLayer connectionParameters){
     alarmEnabled = true;
     while(alarmCount < connectionParameters.nRetransmissions && alarmEnabled == true) {
         printf("Writing SET...\n");
-        if(write_st(fd) == -1){
+        if(write_command(fd, true, CONTROL_SET) == -1){
             perror("error while writing");
             continue;
         }
@@ -145,7 +145,7 @@ int openRead(LinkLayer connectionParameters){
         if(!validate_packet(&packet)) continue;
         if(packet.control != CONTROL_SET) continue;
         printf("RECVed SET... sending UA\n");
-        if(write_ua(fd) == -1){
+        if(write_command(fd, false, CONTROL_UA) == -1){
             perror("error writing UA");
             continue;
         } 

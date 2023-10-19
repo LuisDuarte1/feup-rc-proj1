@@ -12,29 +12,16 @@ void init_packet(packet_t * packet) {
     packet->data_size = 0;
 }
 
-int write_st(int fd){
-    // Create string to send
+int write_command(int fd, bool tx, char command)
+{
     unsigned char buf[BUF_SIZE] = {0};
     buf[0] = FLAG;
-    buf[1] = ADDR_SEND;
-    buf[2] = CONTROL_SET;
-    buf[3] = buf[1] ^ buf[2];
-    buf[4] = FLAG;
-    
-    
-    return write(fd, buf, BUF_SIZE);
-}
-
-
-int write_ua(int fd){
-    unsigned char buf[BUF_SIZE] = {0};
-    buf[0] = FLAG;
-    buf[1] = ADDR_SEND;
+    buf[1] = tx ? ADDR_SEND : ADDR_RECV;
     buf[2] = CONTROL_UA;
     buf[3] = buf[1] ^ buf[2];
     buf[4] = FLAG;
-
     return write(fd, buf, BUF_SIZE);
+
 }
 
 void read_packet(int fd, packet_t * packet){
