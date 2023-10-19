@@ -180,11 +180,16 @@ int llwrite(const unsigned char *buf, int bufSize)
         alarmEnabled = true;
         alarm(linkLayer.timeout);
         init_packet(&packet);
-        read_packet(fd, &packet, true);
-        if(packet.status != SUCCESS) continue;
+        while(alarmEnabled){
+            printf("Reading Packet...\n");
+            read_packet(fd, &packet, true);
+            if(packet.status == SUCCESS) break;
+            
+        }
         if(!validate_packet(&packet)) continue;
-        if((packet.control == CONTROL_I0 && information_toggle) ||
-            (packet.control == CONTROL_I1 && !information_toggle)) break;
+        printf("Packet validated: toggle %d, control: 0x%x\n", information_toggle, packet.control); 
+        if((packet.control == CONTROL_RR0 && information_toggle) ||
+            (packet.control == CONTROL_RR1 && !information_toggle)) break;
     }
     //FIXME (luisd): this can break, but oh well it's almost impossible
     if(alarmCount >= linkLayer.nRetransmissions) return -1;
@@ -199,6 +204,7 @@ int llread(unsigned char *packet)
 {
     packet_t packetStruct;
     init_packet(&packetStruct);
+    
     while(true){
         read_packet(fd, &packetStruct, false);
         if(packetStruct.status != SUCCESS) continue;
@@ -214,6 +220,7 @@ int llread(unsigned char *packet)
         }
         if(packetStruct.control == CONTROL_I0 || packetStruct.control == CONTROL_I1) break;
     }
+    
     write_command(fd, true, packetStruct.control == CONTROL_I0 ? CONTROL_RR1 : CONTROL_RR0);
     memcpy(packet, packetStruct.data, packetStruct.data_size);
     free(packetStruct.data);
