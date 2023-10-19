@@ -7,6 +7,7 @@
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 int fd;
+LinkLayer linkLayer;
 
 int openWrite(LinkLayer connectionParameters){
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
@@ -66,15 +67,17 @@ int openWrite(LinkLayer connectionParameters){
         alarm(connectionParameters.timeout);
         packet_t packet;
         init_packet(&packet);
-        read_packet(fd, &packet);
+        read_packet(fd, &packet, true);
         if(packet.status != SUCCESS){
             alarmEnabled = true;
+            continue;
         }
         printf("Status: %d\n", packet.status);
         if(!validate_packet(&packet)) continue;
         if(packet.control != CONTROL_UA) continue;
         break;
     }
+    linkLayer = connectionParameters;
     return !(alarmCount < connectionParameters.nRetransmissions);
 }
 
@@ -125,27 +128,23 @@ int openRead(LinkLayer connectionParameters){
         perror("tcsetattr");
         exit(-1);
     }
-
-    unsigned char recv_buf;
-    int recv_status = read(fd, &recv_buf, 1);
-    printf("recv_status: %d", recv_status);
         
     //TODO(luisd): timeout after a few seconds? 
     packet_t packet;
     init_packet(&packet);
-    alarmEnabled = true;
     while(true){
         while(true){
 
-            read_packet(fd, &packet);
+            read_packet(fd, &packet, false);
 
             if(packet.status == SUCCESS) break;
             //recv_status = read(fd, &recv_buf, 1);     
         }
+        printf("recved something\n");
         if(!validate_packet(&packet)) continue;
         if(packet.control != CONTROL_SET) continue;
         printf("RECVed SET... sending UA\n");
-        if(write_command(fd, false, CONTROL_UA) == -1){
+        if(write_command(fd, true, CONTROL_UA) == -1){
             perror("error writing UA");
             continue;
         } 
@@ -160,11 +159,11 @@ int openRead(LinkLayer connectionParameters){
 int llopen(LinkLayer connectionParameters)
 {
     if(connectionParameters.role == LlRx){
-        return openRead(connectionParameters);
+        return openRead(connectionParameters) == 0 ? 1 : -1;
     } else if(connectionParameters.role == LlTx){
-        return openWrite(connectionParameters);
+        return openWrite(connectionParameters) == 0 ? 1 : -1;
     }
-    return 1;
+    return -1;
 }
 
 ////////////////////////////////////////////////
@@ -172,9 +171,25 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    // TODO
-
-    return 0;
+    alarmCount = 0;
+    while(alarmCount < linkLayer.nRetransmissions){
+        if(write_data(fd, buf, bufSize) == -1) {
+            return -1;
+        }
+        packet_t packet;
+        alarmEnabled = true;
+        alarm(linkLayer.timeout);
+        init_packet(&packet);
+        read_packet(fd, &packet, true);
+        if(packet.status != SUCCESS) continue;
+        if(!validate_packet(&packet)) continue;
+        if((packet.control == CONTROL_I0 && information_toggle) ||
+            (packet.control == CONTROL_I1 && !information_toggle)) break;
+    }
+    //FIXME (luisd): this can break, but oh well it's almost impossible
+    if(alarmCount >= linkLayer.nRetransmissions) return -1;
+    information_toggle = !information_toggle;
+    return bufSize;
 }
 
 ////////////////////////////////////////////////
@@ -182,9 +197,28 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    // TODO
+    packet_t packetStruct;
+    init_packet(&packetStruct);
+    while(true){
+        read_packet(fd, &packetStruct, false);
+        if(packetStruct.status != SUCCESS) continue;
+        if(!validate_packet(&packetStruct)){
+            if(packetStruct.control == CONTROL_I0 || packetStruct.control == CONTROL_I1){
+                write_command(fd, true, packetStruct.control == CONTROL_I0 ? CONTROL_REJ0 : CONTROL_REJ1);
+            }
+            continue;
+        }
+        if(packetStruct.control == CONTROL_SET){
+            write_command(fd, true, CONTROL_UA);
+            continue;
+        }
+        if(packetStruct.control == CONTROL_I0 || packetStruct.control == CONTROL_I1) break;
+    }
+    write_command(fd, true, packetStruct.control == CONTROL_I0 ? CONTROL_RR1 : CONTROL_RR0);
+    memcpy(packet, packetStruct.data, packetStruct.data_size);
+    free(packetStruct.data);
 
-    return 0;
+    return packetStruct.data_size;
 }
 
 ////////////////////////////////////////////////

@@ -17,20 +17,19 @@ int write_command(int fd, bool tx, char command)
     unsigned char buf[BUF_SIZE] = {0};
     buf[0] = FLAG;
     buf[1] = tx ? ADDR_SEND : ADDR_RECV;
-    buf[2] = CONTROL_UA;
+    buf[2] = command;
     buf[3] = buf[1] ^ buf[2];
     buf[4] = FLAG;
     return write(fd, buf, BUF_SIZE);
 
 }
 
-void read_packet(int fd, packet_t * packet){
+void read_packet(int fd, packet_t * packet, bool tx){
     unsigned char recv_buf;
     int recv_status = read(fd, &recv_buf, 1);
     packet->status = PACKET_BEGIN;
-    while(recv_status >= 0 && alarmEnabled){
+    while(recv_status >= 0 && (alarmEnabled || !tx)){
         packet_status_t new_status = packet->status;
-        
         if(recv_status == 0){
             recv_status = read(fd, &recv_buf, 1);
             
@@ -96,7 +95,6 @@ void read_packet(int fd, packet_t * packet){
                 }
                 break;
         }
-        
         packet->status = new_status;
         if(packet->status == SUCCESS) break;
         recv_status = read(fd, &recv_buf, 1);
@@ -140,19 +138,21 @@ int write_data(int fd, unsigned char *buf, int size)
     
     if(write(fd, packet_start, 4) == -1) return -1;
     
-    //TODO: stuffing buffer
-    stuff_packet(buf, &size);
-    if(write(fd, buf, size) == -1) return -1;
-    free(buf);
-    buf = NULL;
+
+    unsigned char * stuffed_buf = stuff_packet(buf, &size);
+    if(write(fd, stuffed_buf, size) == -1) return -1;
+    free(stuffed_buf);
+    stuffed_buf = NULL;
     
-    //TODO: stuffing bcc2
+
     if(bcc2 == FLAG){
         const unsigned char bcc_flag[2] = {ESCAPE_CHAR, ESCAPE_FLAG};
         if(write(fd, bcc_flag, 2) == -1) return -1;        
     } else {
         if(write(fd, &bcc2, 1) == -1) return -1;
     } 
+    unsigned char flag = FLAG;
+    if(write(fd, &flag, 1) == -1) return -1;
     return 0;
 }
 
@@ -163,7 +163,7 @@ void alarmHandler(int signal){
        
 }
 
-void stuff_packet(unsigned char * buf, int * size){
+unsigned char * stuff_packet(unsigned char * buf, int * size){
 
     unsigned char * nbuffer = (unsigned char*) malloc(*size);
     if(nbuffer == NULL){
@@ -186,8 +186,8 @@ void stuff_packet(unsigned char * buf, int * size){
      }
     }
     
-    buf = nbuffer;
-    *size = new_size; 
+    *size = new_size;
+    return nbuffer; 
 }
 
 

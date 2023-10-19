@@ -25,8 +25,19 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
     connectionParameters.nRetransmissions = nTries;
     connectionParameters.timeout = timeout;
 
-    if(llopen(connectionParameters) != 0){
+    if(llopen(connectionParameters) != 1){
         printf("Couldn't connect to peer\n");
         exit(1);
+    }
+
+    if(connectionParameters.role == LlTx){
+        if(llwrite("o luis e canss", 15) != 0){
+            printf("A lena merdou\n");
+        }
+    } else {
+        char pog[MAX_PAYLOAD_SIZE] = {0};
+        llread(pog);
+        printf("Data: %s\n", pog);
+
     }
 }

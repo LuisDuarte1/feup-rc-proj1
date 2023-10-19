@@ -24,12 +24,18 @@
 #define CONTROL_UA 0x07
 #define CONTROL_I0 0x00
 #define CONTROL_I1 0x40 
+#define CONTROL_REJ0 0x01
+#define CONTROL_REJ1 0x81
+#define CONTROL_RR0 0x05
+#define CONTROL_RR1 0x85
 #define ESCAPE_CHAR 0x7d
 #define ESCAPE_FLAG 0x5e
 #define ESCAPE_ESCAPE 0x5d
 
 extern bool alarmEnabled;
 extern int alarmCount;
+extern bool information_toggle;
+
 
 typedef enum {
     PACKET_BEGIN = 0,
@@ -58,11 +64,11 @@ void init_packet(packet_t * packet);
 int write_command(int fd, bool tx, char command);
 int write_data(int fd, unsigned char * buf, int size);
 
-void read_packet(int fd, packet_t * packet);
+void read_packet(int fd, packet_t * packet, bool tx);
 
 bool validate_packet(packet_t * packet);
 void alarmHandler(int signal);
 
-void stuff_packet(unsigned char * buf, int * size);
+unsigned char * stuff_packet(unsigned char * buf, int * size);
 void destuff_packet(packet_t * packet);
 #endif
