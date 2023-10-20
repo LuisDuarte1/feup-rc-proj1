@@ -202,15 +202,17 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    packet_t packetStruct;
-    init_packet(&packetStruct);
     
+    packet_t packetStruct;
     while(true){
+        init_packet(&packetStruct);
         read_packet(fd, &packetStruct, false);
         if(packetStruct.status != SUCCESS) continue;
         if(!validate_packet(&packetStruct)){
             if(packetStruct.control == CONTROL_I0 || packetStruct.control == CONTROL_I1){
+                printf("Data rejected...\n");
                 write_command(fd, true, packetStruct.control == CONTROL_I0 ? CONTROL_REJ0 : CONTROL_REJ1);
+                free(packetStruct.data);
             }
             continue;
         }

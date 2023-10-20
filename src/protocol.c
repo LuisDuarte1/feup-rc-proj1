@@ -74,7 +74,6 @@ void read_packet(int fd, packet_t * packet, bool tx){
                     //     memcpy(new_data, packet->data, packet->data_size);
                     //     free(packet->data);
                     // }
-                    printf("Data realloc: packet->size %d, new_size: %d, packet->data: 0x%x \n", packet->alloc_size, new_size, packet->data);
                     packet->data = realloc(packet->data, new_size);
                     if(packet->data == NULL){
                         perror("Adoro mallocar");
@@ -96,13 +95,11 @@ void read_packet(int fd, packet_t * packet, bool tx){
                 }
                 break;
         }
-        printf("packet->status: %d\n", new_status);
         packet->status = new_status;
         if(packet->status == SUCCESS) break;
         recv_status = read(fd, &recv_buf, 1);
     }
     if(packet->status == SUCCESS){
-        printf("Success\n");
         if(packet->control == CONTROL_I0 || packet->control == CONTROL_I1){
             if(packet->data[packet->data_size - 2] == 0x7d){
                 packet->bcc2 = FLAG;
@@ -111,6 +108,7 @@ void read_packet(int fd, packet_t * packet, bool tx){
                 packet->bcc2 = packet->data[packet->data_size-1];
                 packet->data_size--;
             }
+            destuff_packet(packet);
         }
         alarm(0);
         alarmEnabled = false;
