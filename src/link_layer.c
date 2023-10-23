@@ -11,7 +11,7 @@ LinkLayer linkLayer;
 
 int openWrite(LinkLayer connectionParameters){
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
-
+    (void) signal(SIGALRM, alarmHandler);
     if (fd < 0)
     {
         perror(connectionParameters.serialPort);

@@ -101,8 +101,9 @@ void read_packet(int fd, packet_t * packet, bool tx){
     }
     if(packet->status == SUCCESS){
         if(packet->control == CONTROL_I0 || packet->control == CONTROL_I1){
-            if(packet->data[packet->data_size - 2] == 0x7d){
-                packet->bcc2 = FLAG;
+            if(packet->data[packet->data_size - 2] == ESCAPE_CHAR){
+                packet->bcc2 = packet->data[packet->data_size - 1] == ESCAPE_FLAG 
+                    ? FLAG : ESCAPE_ESCAPE;
                 packet->data_size -= 2;
             } else {
                 packet->bcc2 = packet->data[packet->data_size-1];
@@ -149,7 +150,12 @@ int write_data(int fd, unsigned char *buf, int size)
     if(bcc2 == FLAG){
         const unsigned char bcc_flag[2] = {ESCAPE_CHAR, ESCAPE_FLAG};
         if(write(fd, bcc_flag, 2) == -1) return -1;        
-    } else {
+    } else if(bcc2 == ESCAPE_CHAR){
+        const unsigned char bcc_flag[2] = {ESCAPE_CHAR, ESCAPE_ESCAPE};
+        if(write(fd, bcc_flag, 2) == -1) return -1;        
+
+    } 
+    else {
         if(write(fd, &bcc2, 1) == -1) return -1;
     } 
     unsigned char flag = FLAG;

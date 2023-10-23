@@ -194,6 +194,7 @@ void mainRx(const char * filename){
     char recv_filename[256] = {0};
     bool control_exit = false;
     int fd = -1;
+    control_packet_t packet;
     while(bytes = llread(&buf), bytes != -1){
         printf("bytes: %d\n", bytes);
         if(bytes == 0) continue;
@@ -204,7 +205,7 @@ void mainRx(const char * filename){
                 process_data_packet(buf, bytes, fd);
                 break;
             case 2:
-                control_packet_t packet = read_control_packet(buf, bytes);
+                packet = read_control_packet(buf, bytes);
                 for(int i = 0; i < packet.length; i++){
                     if(packet.parameters[i].type == 0){
                         file_size = *(int *)((void*) packet.parameters[i].parameter);
