@@ -32,8 +32,8 @@
 #define ESCAPE_FLAG 0x5e
 #define ESCAPE_ESCAPE 0x5d
 
-extern bool alarmEnabled;
-extern int alarmCount;
+extern bool alarm_enabled;
+extern int alarm_count;
 extern bool information_toggle;
 
 

@@ -7,7 +7,7 @@
 #define _POSIX_SOURCE 1 // POSIX compliant source
 
 int fd;
-LinkLayer linkLayer;
+LinkLayer link_layer;
 
 int openWrite(LinkLayer connectionParameters){
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
@@ -56,9 +56,9 @@ int openWrite(LinkLayer connectionParameters){
         perror("tcsetattr");
         exit(-1);
     }
-    alarmCount = 0;
-    alarmEnabled = true;
-    while(alarmCount < connectionParameters.nRetransmissions && alarmEnabled == true) {
+    alarm_count = 0;
+    alarm_enabled = true;
+    while(alarm_count < connectionParameters.nRetransmissions && alarm_enabled == true) {
         printf("Writing SET...\n");
         if(write_command(fd, true, CONTROL_SET) == -1){
             perror("error while writing");
@@ -69,16 +69,17 @@ int openWrite(LinkLayer connectionParameters){
         init_packet(&packet);
         read_packet(fd, &packet, true);
         if(packet.status != SUCCESS){
-            alarmEnabled = true;
+            alarm_enabled = true;
             continue;
         }
         printf("Status: %d\n", packet.status);
         if(!validate_packet(&packet)) continue;
+        // aqui se o control enviado não for o UA, o loop não falha logo? Porque o alarm foi desativado
         if(packet.control != CONTROL_UA) continue;
         break;
     }
-    linkLayer = connectionParameters;
-    return !(alarmCount < connectionParameters.nRetransmissions);
+    link_layer = connectionParameters;
+    return !(alarm_count < connectionParameters.nRetransmissions);
 }
 
 int openRead(LinkLayer connectionParameters){
@@ -137,8 +138,7 @@ int openRead(LinkLayer connectionParameters){
 
             read_packet(fd, &packet, false);
 
-            if(packet.status == SUCCESS) break;
-            //recv_status = read(fd, &recv_buf, 1);     
+            if(packet.status == SUCCESS) break;    
         }
         printf("recved something\n");
         if(!validate_packet(&packet)) continue;
@@ -171,28 +171,27 @@ int llopen(LinkLayer connectionParameters)
 ////////////////////////////////////////////////
 int llwrite(const unsigned char *buf, int bufSize)
 {
-    alarmCount = 0;
-    while(alarmCount < linkLayer.nRetransmissions){
-        if(write_data(fd, buf, bufSize) == -1) {
-            return -1;
-        }
+    alarm_count = 0;
+    while(alarm_count < link_layer.nRetransmissions){
+        if(write_data(fd, buf, bufSize) == -1) return -1;
+        
         packet_t packet;
-        alarmEnabled = true;
-        alarm(linkLayer.timeout);
+        alarm_enabled = true;
+        alarm(link_layer.timeout);
         init_packet(&packet);
-        while(alarmEnabled){
+        while(alarm_enabled){
             printf("Reading Packet...\n");
             read_packet(fd, &packet, true);
             if(packet.status == SUCCESS) break;
-            
         }
+
         if(!validate_packet(&packet)) continue;
         printf("Packet validated: toggle %d, control: 0x%x\n", information_toggle, packet.control); 
         if((packet.control == CONTROL_RR0 && information_toggle) ||
             (packet.control == CONTROL_RR1 && !information_toggle)) break;
     }
-    //FIXME (luisd): this can break, but oh well it's almost impossible
-    if(alarmCount >= linkLayer.nRetransmissions) return -1;
+
+    if(alarm_count >= link_layer.nRetransmissions) return -1;
     information_toggle = !information_toggle;
     return bufSize;
 }
@@ -202,7 +201,6 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    
     packet_t packetStruct;
     while(true){
         init_packet(&packetStruct);

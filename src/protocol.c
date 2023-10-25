@@ -1,8 +1,8 @@
 #include "protocol.h"
 
 
-bool alarmEnabled = false;
-int alarmCount = 0;
+bool alarm_enabled = false;
+int alarm_count = 0;
 
 bool information_toggle = false;
 
@@ -29,14 +29,15 @@ void read_packet(int fd, packet_t * packet, bool tx){
     unsigned char recv_buf;
     int recv_status = read(fd, &recv_buf, 1);
     packet->status = PACKET_BEGIN;
-    while(recv_status >= 0 && (alarmEnabled || !tx)){
+    //lena: duvidaduvida (como o rx agr tem alarme,
+    // isto ainda se aplica?
+    while(recv_status >= 0 && (alarm_enabled || !tx)){
         packet_status_t new_status = packet->status;
         if(recv_status == 0){
             recv_status = read(fd, &recv_buf, 1);
-            
             continue;
         }
-        
+
         switch (packet->status){
             case PACKET_BEGIN:
                 if(recv_buf == FLAG){
@@ -64,16 +65,6 @@ void read_packet(int fd, packet_t * packet, bool tx){
             case DATA:
                 if(packet->data_size == packet->alloc_size){
                     int new_size = packet->alloc_size == 0 ? 10 : packet->alloc_size*2;
-        
-                    // unsigned char * new_data = (unsigned char *) malloc(new_size);
-                    // if(new_data == NULL){
-                    //     perror("Adoro mallocar");
-                    //     exit(1);
-                    // }
-                    // if(packet->alloc_size != 0){
-                    //     memcpy(new_data, packet->data, packet->data_size);
-                    //     free(packet->data);
-                    // }
                     packet->data = realloc(packet->data, new_size);
                     if(packet->data == NULL){
                         perror("Adoro mallocar");
@@ -81,6 +72,7 @@ void read_packet(int fd, packet_t * packet, bool tx){
                     }
                     packet->alloc_size = new_size;
                 }
+                
                 if(recv_buf == FLAG){
                     new_status = SUCCESS;
                 } else {
@@ -112,7 +104,7 @@ void read_packet(int fd, packet_t * packet, bool tx){
             destuff_packet(packet);
         }
         alarm(0);
-        alarmEnabled = false;
+        alarm_enabled = false;
     }
 }
 
@@ -165,8 +157,8 @@ int write_data(int fd, unsigned char *buf, int size)
 
 void alarmHandler(int signal){
 
-    if(alarmEnabled) alarmCount++;
-    alarmEnabled = false;
+    if(alarm_enabled) alarm_count++;
+    alarm_enabled = false;
        
 }
 
