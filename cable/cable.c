@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include <time.h>
 
 // Baudrate settings are defined in <asm/termbits.h>, which is
 // included by <termios.h>
@@ -64,6 +65,8 @@ void addNoiseToBuffer(unsigned char *buf, size_t errorIndex)
 
 int main(int argc, char *argv[])
 {
+    time_t t;
+    srand((unsigned) time(&t));
     printf("\n");
 
     system("socat -dd PTY,link=/dev/ttyS10,mode=777 PTY,link=/dev/emulatorTx,mode=777 &");
@@ -135,7 +138,11 @@ int main(int argc, char *argv[])
             {
                 if (cableMode == CableModeNoise)
                 {
-                    addNoiseToBuffer(tx2rx, 0);
+                    int prob = rand() % 3;
+                    if(prob == 0){
+                        int bytes_pos = rand() % bytesFromTx;
+                        addNoiseToBuffer(tx2rx, bytes_pos);
+                    }
                 }
 
                 int bytesToRx = write(fdRx, tx2rx, bytesFromTx);
@@ -156,7 +163,12 @@ int main(int argc, char *argv[])
             {
                 if (cableMode == CableModeNoise)
                 {
-                    addNoiseToBuffer(rx2tx, 0);
+                    int prob = rand() % 3;
+                    if(prob == 0){
+                        int bytes_pos = rand() % bytesFromTx;
+                        addNoiseToBuffer(rx2tx, bytes_pos);
+                    }
+
                 }
 
                 int bytesToTx = write(fdTx, rx2tx, bytesFromRx);

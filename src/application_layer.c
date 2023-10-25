@@ -195,7 +195,7 @@ void mainRx(const char * filename){
     bool control_exit = false;
     int fd = -1;
     control_packet_t packet;
-    while(bytes = llread(&buf), bytes != -1){
+    while(bytes = llread(&buf), true){
         printf("bytes: %d\n", bytes);
         if(bytes == 0) continue;
         read_state = buf[0];
