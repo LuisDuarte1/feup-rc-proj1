@@ -155,7 +155,7 @@ int write_data(int fd, unsigned char *buf, int size)
     return 0;
 }
 
-void alarmHandler(int signal){
+void alarm_handler(int signal){
 
     if(alarm_enabled) alarm_count++;
     alarm_enabled = false;

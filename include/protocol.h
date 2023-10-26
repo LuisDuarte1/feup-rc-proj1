@@ -67,7 +67,7 @@ int write_data(int fd, unsigned char * buf, int size);
 void read_packet(int fd, packet_t * packet, bool tx);
 
 bool validate_packet(packet_t * packet);
-void alarmHandler(int signal);
+void alarm_handler(int signal);
 
 unsigned char * stuff_packet(unsigned char * buf, int * size);
 void destuff_packet(packet_t * packet);

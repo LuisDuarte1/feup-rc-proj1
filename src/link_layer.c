@@ -9,9 +9,9 @@
 int fd;
 LinkLayer link_layer;
 
-int openWrite(LinkLayer connectionParameters){
+int open_write(LinkLayer connectionParameters){
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
-    (void) signal(SIGALRM, alarmHandler);
+    (void) signal(SIGALRM, alarm_handler);
     if (fd < 0)
     {
         perror(connectionParameters.serialPort);
@@ -82,8 +82,10 @@ int openWrite(LinkLayer connectionParameters){
     return !(alarm_count < connectionParameters.nRetransmissions);
 }
 
-int openRead(LinkLayer connectionParameters){
+int open_read(LinkLayer connectionParameters){
     
+
+    // aqui lembro-me de termos adicionado o alarme para o read tbm, mas acho que não se deu push
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     if (fd < 0)
     {
@@ -159,9 +161,9 @@ int openRead(LinkLayer connectionParameters){
 int llopen(LinkLayer connectionParameters)
 {
     if(connectionParameters.role == LlRx){
-        return openRead(connectionParameters) == 0 ? 1 : -1;
+        return open_read(connectionParameters) == 0 ? 1 : -1;
     } else if(connectionParameters.role == LlTx){
-        return openWrite(connectionParameters) == 0 ? 1 : -1;
+        return open_write(connectionParameters) == 0 ? 1 : -1;
     }
     return -1;
 }
@@ -201,31 +203,31 @@ int llwrite(const unsigned char *buf, int bufSize)
 ////////////////////////////////////////////////
 int llread(unsigned char *packet)
 {
-    packet_t packetStruct;
+    packet_t packet_struct;
     while(true){
-        init_packet(&packetStruct);
-        read_packet(fd, &packetStruct, false);
-        if(packetStruct.status != SUCCESS) continue;
-        if(!validate_packet(&packetStruct)){
-            if(packetStruct.control == CONTROL_I0 || packetStruct.control == CONTROL_I1){
+        init_packet(&packet_struct);
+        read_packet(fd, &packet_struct, false);
+        if(packet_struct.status != SUCCESS) continue;
+        if(!validate_packet(&packet_struct)){
+            if(packet_struct.control == CONTROL_I0 || packet_struct.control == CONTROL_I1){
                 printf("Data rejected...\n");
-                write_command(fd, true, packetStruct.control == CONTROL_I0 ? CONTROL_REJ0 : CONTROL_REJ1);
-                free(packetStruct.data);
+                write_command(fd, true, packet_struct.control == CONTROL_I0 ? CONTROL_REJ0 : CONTROL_REJ1);
+                free(packet_struct.data);
             }
             continue;
         }
-        if(packetStruct.control == CONTROL_SET){
+        if(packet_struct.control == CONTROL_SET){
             write_command(fd, true, CONTROL_UA);
             continue;
         }
-        if(packetStruct.control == CONTROL_I0 || packetStruct.control == CONTROL_I1) break;
+        if(packet_struct.control == CONTROL_I0 || packet_struct.control == CONTROL_I1) break;
     }
     
-    write_command(fd, true, packetStruct.control == CONTROL_I0 ? CONTROL_RR1 : CONTROL_RR0);
-    memcpy(packet, packetStruct.data, packetStruct.data_size);
-    free(packetStruct.data);
+    write_command(fd, true, packet_struct.control == CONTROL_I0 ? CONTROL_RR1 : CONTROL_RR0);
+    memcpy(packet, packet_struct.data, packet_struct.data_size);
+    free(packet_struct.data);
 
-    return packetStruct.data_size;
+    return packet_struct.data_size;
 }
 
 ////////////////////////////////////////////////
