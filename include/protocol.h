@@ -28,12 +28,13 @@
 #define CONTROL_REJ1 0x81
 #define CONTROL_RR0 0x05
 #define CONTROL_RR1 0x85
+#define CONTROL_DISC 0x0B
 #define ESCAPE_CHAR 0x7d
 #define ESCAPE_FLAG 0x5e
 #define ESCAPE_ESCAPE 0x5d
 
-extern bool alarmEnabled;
-extern int alarmCount;
+extern bool alarm_enabled;
+extern int alarm_count;
 extern bool information_toggle;
 
 
@@ -67,7 +68,7 @@ int write_data(int fd, unsigned char * buf, int size);
 void read_packet(int fd, packet_t * packet, bool tx);
 
 bool validate_packet(packet_t * packet);
-void alarmHandler(int signal);
+void alarm_handler(int signal);
 
 unsigned char * stuff_packet(unsigned char * buf, int * size);
 void destuff_packet(packet_t * packet);
