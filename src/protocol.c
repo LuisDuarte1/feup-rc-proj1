@@ -1,6 +1,5 @@
 #include "protocol.h"
 
-
 bool alarm_enabled = false;
 int alarm_count = 0;
 

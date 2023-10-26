@@ -235,7 +235,17 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
-    // TODO
+    /*if (showStatistics) {
+        printf("No statistics\n");
+    }
 
-    return 1;
+    if (link_layer.role == LlTx) {
+        
+    }
+    else {
+    
+    }
+    
+    close(fd);
+    return 1;*/
 }
