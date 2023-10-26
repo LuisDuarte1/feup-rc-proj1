@@ -176,22 +176,24 @@ int llwrite(const unsigned char *buf, int bufSize)
     alarm_count = 0;
     while(alarm_count < link_layer.nRetransmissions){
         if(write_data(fd, buf, bufSize) == -1) return -1;
+        printf("Written data packet... curr_retransmissions: %d\tmax:%d\n", alarm_count, link_layer.nRetransmissions);
         
         packet_t packet;
-        alarm_enabled = true;
         alarm(link_layer.timeout);
         init_packet(&packet);
+        alarm_enabled = true;
         while(alarm_enabled){
-            printf("Reading Packet...\n");
             read_packet(fd, &packet, true);
             if(packet.status == SUCCESS) break;
         }
-
+        alarm(0);
+        if(packet.status != SUCCESS) continue;
         if(!validate_packet(&packet)) continue;
         printf("Packet received: toggle %d, control: 0x%x\n", information_toggle, packet.control); 
         if((packet.control == CONTROL_RR0 && information_toggle) ||
             (packet.control == CONTROL_RR1 && !information_toggle)) break;
         printf("RX REJECTED A PACKET...\n");
+        alarm_count = 0;
     }
 
     if(alarm_count >= link_layer.nRetransmissions) return -1;

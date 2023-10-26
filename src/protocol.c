@@ -7,6 +7,7 @@ bool information_toggle = false;
 
 
 void init_packet(packet_t * packet) {
+    packet->status = PACKET_BEGIN;
     packet->alloc_size = 0;
     packet->data_size = 0;
     packet->data = NULL;
