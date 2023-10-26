@@ -28,8 +28,7 @@ void read_packet(int fd, packet_t * packet, bool tx){
     unsigned char recv_buf;
     int recv_status = read(fd, &recv_buf, 1);
     packet->status = PACKET_BEGIN;
-    //lena: duvidaduvida (como o rx agr tem alarme,
-    // isto ainda se aplica?
+   
     while(recv_status >= 0 && (alarm_enabled || !tx)){
         packet_status_t new_status = packet->status;
         if(recv_status == 0){

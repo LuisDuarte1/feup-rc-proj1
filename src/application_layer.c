@@ -1,9 +1,9 @@
 // Application layer protocol implementation
 
 
+#include <inttypes.h>
 #include "application_layer.h"
 #include "application_protocol.h"
-
 
 void mainTx(const char * filename){
     int fd = open(filename, O_RDONLY);
@@ -19,7 +19,7 @@ void mainTx(const char * filename){
     control_parameter_t size_parameter;
     size_parameter.type = FILESIZE;
     size_parameter.parameter_size = 4; // sizeof(file_size) ?
-    *((int *) ((void *) size_parameter.parameter)) = file_size;
+    *((int *) ((void *) size_parameter.parameter)) = __builtin_bswap32(file_size);
     
     control_parameter_t filename_parameter;
     filename_parameter.type = FILENAME;
@@ -85,7 +85,8 @@ void mainRx(const char * filename){
                 packet = read_control_packet(buf, bytes);
                 for(int i = 0; i < packet.length; i++){
                     if(packet.parameters[i].type == FILESIZE){
-                        file_size = *(int *)((void*) packet.parameters[i].parameter);
+                        file_size =  __builtin_bswap32(*(int *)((void*) packet.parameters[i].parameter));
+                        printf("recved file_size: %d\n", file_size);
                     } else if (packet.parameters[i].type == FILENAME){
                         memcpy(recv_filename, packet.parameters[i].parameter, packet.parameters[i].parameter_size);
                     }
@@ -136,5 +137,9 @@ void applicationLayer(const char *serialPort, const char *role, int baudRate,
         mainTx(filename);
     } else {
         mainRx(filename);
+    }
+    if(llclose(1) == -1){
+        printf("Error while closing connection...\n");
+        exit(1);
     }
 }

@@ -28,6 +28,7 @@
 #define CONTROL_REJ1 0x81
 #define CONTROL_RR0 0x05
 #define CONTROL_RR1 0x85
+#define CONTROL_DISC 0x0B
 #define ESCAPE_CHAR 0x7d
 #define ESCAPE_FLAG 0x5e
 #define ESCAPE_ESCAPE 0x5d

@@ -8,6 +8,8 @@
 
 int fd;
 LinkLayer link_layer;
+struct termios oldtio;
+struct termios newtio;
 
 int open_write(LinkLayer connectionParameters){
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
@@ -17,9 +19,6 @@ int open_write(LinkLayer connectionParameters){
         perror(connectionParameters.serialPort);
         exit(-1);
     }
-
-    struct termios oldtio;
-    struct termios newtio;
 
     // Save current port settings
     if (tcgetattr(fd, &oldtio) == -1)
@@ -87,14 +86,14 @@ int open_read(LinkLayer connectionParameters){
 
     // aqui lembro-me de termos adicionado o alarme para o read tbm, mas acho que não se deu push
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
+    (void) signal(SIGALRM, alarm_handler);
     if (fd < 0)
     {
         perror(connectionParameters.serialPort);
         exit(-1);
     }
 
-    struct termios oldtio;
-    struct termios newtio;
+
 
     // Save current port settings
     if (tcgetattr(fd, &oldtio) == -1)
@@ -152,6 +151,7 @@ int open_read(LinkLayer connectionParameters){
         } 
         break;
     }
+    link_layer = connectionParameters;
     return 0;
 }
 
@@ -188,9 +188,10 @@ int llwrite(const unsigned char *buf, int bufSize)
         }
 
         if(!validate_packet(&packet)) continue;
-        printf("Packet validated: toggle %d, control: 0x%x\n", information_toggle, packet.control); 
+        printf("Packet received: toggle %d, control: 0x%x\n", information_toggle, packet.control); 
         if((packet.control == CONTROL_RR0 && information_toggle) ||
             (packet.control == CONTROL_RR1 && !information_toggle)) break;
+        printf("RX REJECTED A PACKET...\n");
     }
 
     if(alarm_count >= link_layer.nRetransmissions) return -1;
@@ -216,13 +217,15 @@ int llread(unsigned char *packet)
             }
             continue;
         }
+        if(!((packet_struct.control == CONTROL_I0 && !information_toggle) ||
+            (packet_struct.control == CONTROL_I1 && information_toggle))) continue;
         if(packet_struct.control == CONTROL_SET){
             write_command(fd, true, CONTROL_UA);
             continue;
         }
         if(packet_struct.control == CONTROL_I0 || packet_struct.control == CONTROL_I1) break;
     }
-    
+    information_toggle = !information_toggle;
     write_command(fd, true, packet_struct.control == CONTROL_I0 ? CONTROL_RR1 : CONTROL_RR0);
     memcpy(packet, packet_struct.data, packet_struct.data_size);
     free(packet_struct.data);
@@ -235,17 +238,71 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
-    /*if (showStatistics) {
+    if (showStatistics) {
         printf("No statistics\n");
     }
-
+    alarm_count = 0;
     if (link_layer.role == LlTx) {
-        
+        while(alarm_count < link_layer.nRetransmissions){
+            write_command(fd, true, CONTROL_DISC);
+            alarm_enabled = true;
+            packet_t packet;
+            init_packet(&packet);
+            alarm(link_layer.timeout);
+            read_packet(fd, &packet, true);
+            if(packet.status != SUCCESS){
+                printf("nao ruizao: %d \n", packet.status);
+                alarm(0);
+                continue;
+            }
+            if(!validate_packet(&packet)){
+                printf("nao validado \n");
+                continue;
+            } 
+            alarm(0);
+            if(packet.control == CONTROL_DISC) break;
+        }
+        if(alarm_count >= link_layer.nRetransmissions){
+            return -1;
+        } 
+        alarm_count = 0;
+        write_command(fd, true, CONTROL_UA);
     }
     else {
-    
+        packet_t packet;
+        init_packet(&packet);
+        while(true){
+            while(true){
+                read_packet(fd, &packet, false);
+                if(packet.status == SUCCESS) break;
+            }
+            if (!validate_packet(&packet)) continue;
+            if(packet.control != CONTROL_DISC) continue;
+            break;
+        }
+        alarm_count = 0;
+        init_packet(&packet);
+        while(alarm_count < link_layer.nRetransmissions){
+            write_command(fd, false, CONTROL_DISC);
+            alarm_enabled = true;
+            alarm(link_layer.timeout);
+            read_packet(fd, &packet, true);
+            if(packet.status != SUCCESS){
+                alarm(0);
+                continue;
+            }
+            alarm(0);
+            if(packet.control == CONTROL_UA) break;
+        }
+        if(alarm_count >= link_layer.nRetransmissions){
+            return -1;
+        } 
     }
-    
+    if (tcsetattr(fd, TCSANOW, &oldtio) == -1)
+    {
+        perror("tcsetattr");
+        exit(-1);
+    }   
     close(fd);
-    return 1;*/
+    return 1;
 }
