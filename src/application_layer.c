@@ -84,9 +84,9 @@ void mainRx(const char * filename){
             case 2:
                 packet = read_control_packet(buf, bytes);
                 for(int i = 0; i < packet.length; i++){
-                    if(packet.parameters[i].type == 0){
+                    if(packet.parameters[i].type == FILESIZE){
                         file_size = *(int *)((void*) packet.parameters[i].parameter);
-                    } else if (packet.parameters[i].type == 1){
+                    } else if (packet.parameters[i].type == FILENAME){
                         memcpy(recv_filename, packet.parameters[i].parameter, packet.parameters[i].parameter_size);
                     }
                 }
