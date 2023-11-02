@@ -57,7 +57,7 @@ int open_write(LinkLayer connectionParameters){
     }
     alarm_count = 0;
     alarm_enabled = true;
-    while(alarm_count < connectionParameters.nRetransmissions && alarm_enabled == true) {
+    while(alarm_count <= connectionParameters.nRetransmissions && alarm_enabled == true) {
         printf("Writing SET...\n");
         if(write_command(fd, true, CONTROL_SET) == -1){
             perror("error while writing");
@@ -78,7 +78,7 @@ int open_write(LinkLayer connectionParameters){
         break;
     }
     link_layer = connectionParameters;
-    return !(alarm_count < connectionParameters.nRetransmissions);
+    return !(alarm_count <= connectionParameters.nRetransmissions);
 }
 
 int open_read(LinkLayer connectionParameters){
@@ -174,7 +174,7 @@ int llopen(LinkLayer connectionParameters)
 int llwrite(const unsigned char *buf, int bufSize)
 {
     alarm_count = 0;
-    while(alarm_count < link_layer.nRetransmissions){
+    while(alarm_count <= link_layer.nRetransmissions){
         if(write_data(fd, buf, bufSize) == -1) return -1;
         printf("Written data packet... curr_retransmissions: %d\tmax:%d\n", alarm_count, link_layer.nRetransmissions);
         
@@ -196,7 +196,7 @@ int llwrite(const unsigned char *buf, int bufSize)
         alarm_count = 0;
     }
 
-    if(alarm_count >= link_layer.nRetransmissions) return -1;
+    if(alarm_count > link_layer.nRetransmissions) return -1;
     information_toggle = !information_toggle;
     return bufSize;
 }
@@ -245,7 +245,7 @@ int llclose(int showStatistics)
     }
     alarm_count = 0;
     if (link_layer.role == LlTx) {
-        while(alarm_count < link_layer.nRetransmissions){
+        while(alarm_count <= link_layer.nRetransmissions){
             write_command(fd, true, CONTROL_DISC);
             alarm_enabled = true;
             packet_t packet;
@@ -264,7 +264,7 @@ int llclose(int showStatistics)
             alarm(0);
             if(packet.control == CONTROL_DISC) break;
         }
-        if(alarm_count >= link_layer.nRetransmissions){
+        if(alarm_count > link_layer.nRetransmissions){
             return -1;
         } 
         alarm_count = 0;
@@ -284,7 +284,7 @@ int llclose(int showStatistics)
         }
         alarm_count = 0;
         init_packet(&packet);
-        while(alarm_count < link_layer.nRetransmissions){
+        while(alarm_count <= link_layer.nRetransmissions){
             write_command(fd, false, CONTROL_DISC);
             alarm_enabled = true;
             alarm(link_layer.timeout);
@@ -296,7 +296,7 @@ int llclose(int showStatistics)
             alarm(0);
             if(packet.control == CONTROL_UA) break;
         }
-        if(alarm_count >= link_layer.nRetransmissions){
+        if(alarm_count > link_layer.nRetransmissions){
             return -1;
         } 
     }
