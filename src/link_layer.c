@@ -1,5 +1,6 @@
 // Link layer protocol implementation
 
+#include <time.h>
 #include "link_layer.h"
 #include "protocol.h"
 
@@ -10,6 +11,10 @@ int fd;
 LinkLayer link_layer;
 struct termios oldtio;
 struct termios newtio;
+time_t initial_time;
+time_t final_time;
+int num_bytes = 0;
+
 
 int open_write(LinkLayer connectionParameters){
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
@@ -78,6 +83,7 @@ int open_write(LinkLayer connectionParameters){
         break;
     }
     link_layer = connectionParameters;
+    time(&initial_time);
     return !(alarm_count <= connectionParameters.nRetransmissions);
 }
 
@@ -198,6 +204,7 @@ int llwrite(const unsigned char *buf, int bufSize)
 
     if(alarm_count > link_layer.nRetransmissions) return -1;
     information_toggle = !information_toggle;
+    num_bytes += bufSize;
     return bufSize;
 }
 
@@ -240,8 +247,10 @@ int llread(unsigned char *packet)
 ////////////////////////////////////////////////
 int llclose(int showStatistics)
 {
-    if (showStatistics) {
-        printf("No statistics\n");
+    time(&final_time);
+    if (showStatistics && link_layer.role == LlTx) {
+        float speed = num_bytes/(final_time-initial_time);
+        printf("Transfer speed: %f\n", speed);
     }
     alarm_count = 0;
     if (link_layer.role == LlTx) {
