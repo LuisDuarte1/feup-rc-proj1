@@ -76,6 +76,7 @@ int open_write(LinkLayer connectionParameters){
             alarm_enabled = true;
             continue;
         }
+        printf("Status: %d\n", packet.status);
         if(!validate_packet(&packet)) continue;
         if(packet.control != CONTROL_UA) continue;
         break;
