@@ -76,9 +76,7 @@ int open_write(LinkLayer connectionParameters){
             alarm_enabled = true;
             continue;
         }
-        printf("Status: %d\n", packet.status);
         if(!validate_packet(&packet)) continue;
-        // aqui se o control enviado não for o UA, o loop não falha logo? Porque o alarm foi desativado
         if(packet.control != CONTROL_UA) continue;
         break;
     }
@@ -90,7 +88,6 @@ int open_write(LinkLayer connectionParameters){
 int open_read(LinkLayer connectionParameters){
     
 
-    // aqui lembro-me de termos adicionado o alarme para o read tbm, mas acho que não se deu push
     fd = open(connectionParameters.serialPort, O_RDWR | O_NOCTTY);
     (void) signal(SIGALRM, alarm_handler);
     if (fd < 0)
@@ -137,7 +134,6 @@ int open_read(LinkLayer connectionParameters){
         exit(-1);
     }
         
-    //TODO(luisd): timeout after a few seconds? 
     packet_t packet;
     init_packet(&packet);
     while(true){
