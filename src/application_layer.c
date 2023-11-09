@@ -9,7 +9,6 @@ void mainTx(const char * filename){
     int fd = open(filename, O_RDONLY);
     if(fd == -1){
         perror("couldn't open file");
-        //TODO(luisd): close connectiion maybe?
         exit(1);
     }
     struct stat st;
